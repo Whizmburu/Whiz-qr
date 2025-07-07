@@ -60,16 +60,6 @@ h1 {
     border-radius: 5px; /* If border-radius for container is 10px, make this slightly less */
 }
 
-.embedded-logo {
-    position: absolute;
-    width: 50px; /* Adjust size of embedded logo */
-    height: 50px; /* Adjust size of embedded logo */
-    background-color: #fff; /* Optional: if logo has transparent parts */
-    padding: 5px; /* Optional: space around logo */
-    border-radius: 8px; /* Optional: rounded corners for logo bg */
-    box-shadow: 0 0 10px rgba(0,0,0,0.2); /* Optional: slight shadow for depth */
-}
-
 p {
     font-size: 0.95em;
     line-height: 1.6;
