@@ -2,8 +2,7 @@ const express = require('express');
 const path = require('path');
 const qrcode = require('qrcode'); // For generating QR code image data URL
 const मेकWASocket = require('@whiskeysockets/baileys').default;
-const { Browsers } = require('@whiskeysockets/baileys');
-const { useInMemoryAuthState } = require('@whiskeysockets/baileys'); // For simple auth state
+const { Browsers, useMultiFileAuthState } = require('@whiskeysockets/baileys'); // Changed import
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -27,7 +26,11 @@ async function connectToWhatsApp() {
     currentQR = null; // Reset QR on new connection attempt
     waConnectionState = 'connecting';
 
-    const { state, saveCreds } = await useInMemoryAuthState(); // Simple auth state, no file saving for this example
+    // Using useMultiFileAuthState as it's the documented method
+    // For a QR-only generator, the actual file persistence might not be critical
+    // if the server restarts frequently, but Baileys expects this structure.
+    // A directory 'baileys_auth_info' will be created if it doesn't exist.
+    const { state, saveCreds } = await useMultiFileAuthState('baileys_auth_info');
 
     sock = मेकWASocket({
         auth: state,
