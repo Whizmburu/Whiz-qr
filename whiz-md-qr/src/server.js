@@ -23,7 +23,7 @@ fs.mkdir(PERMANENT_AUTH_SESSIONS_DIR, { recursive: true }).catch(console.error);
 
 const STALE_SESSION_CLEANUP_INTERVAL_MS = 60 * 60 * 1000;
 const MAX_QR_SESSION_AGE_MS = 2 * 60 * 1000;
-const QR_VALIDITY_SECONDS = 60; // Used by client, and server for cleanup timeout
+const QR_VALIDITY_SECONDS = 60;
 
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
@@ -31,8 +31,7 @@ async function cleanupSession(sessionId, authPath, socketInstance, removeFromQrS
     console.log(`Cleaning up session: ${sessionId} at path: ${authPath}`);
     if (socketInstance) {
         try {
-            // Check if socket has a logout method and is not already closed/undefined
-            if (socketInstance.ws && socketInstance.ws.readyState === 1) { // 1 is OPEN
+            if (socketInstance.ws && socketInstance.ws.readyState === 1) {
                  await socketInstance.logout();
                  console.log(`Socket logged out for session ${sessionId}`);
             } else {
@@ -47,7 +46,6 @@ async function cleanupSession(sessionId, authPath, socketInstance, removeFromQrS
             await fs.rm(authPath, { recursive: true, force: true });
             console.log(`Removed auth directory: ${authPath}`);
         } catch (e) {
-            // If ENOENT, directory might have been removed by another cleanup process, which is fine.
             if (e.code !== 'ENOENT') {
                 console.error(`Error removing auth directory ${authPath}:`, e.message);
             } else {
@@ -55,7 +53,7 @@ async function cleanupSession(sessionId, authPath, socketInstance, removeFromQrS
             }
         }
     }
-    if (removeFromQrSessionsMap) {
+    if (removeFromQrSessionsMap && qrSessions.has(sessionId)) { // Check if it exists before deleting
         qrSessions.delete(sessionId);
         console.log(`Removed session ${sessionId} from qrSessions map.`);
     }
@@ -66,15 +64,13 @@ async function cleanupOldOrphanedSessions() {
     try {
         const sessionDirs = await fs.readdir(TEMP_AUTH_SESSIONS_DIR);
         for (const dirName of sessionDirs) {
-            const sessionIdFromDir = dirName; // Assuming dirName is the sessionId (e.g., qr_xxxx or session_qr_xxxx)
-                                          // If it's session_qr_xxxx, you might need to parse it.
-                                          // For simplicity, assuming dirName IS the key used in qrSessions or a parsable version.
+            const sessionIdFromDir = dirName;
             const sessionAuthPath = path.join(TEMP_AUTH_SESSIONS_DIR, dirName);
             let shouldDelete = false;
 
             const sessionData = qrSessions.get(sessionIdFromDir);
             if (sessionData) {
-                if (Date.now() - sessionData.creationTime > MAX_QR_SESSION_AGE_MS * 3 && // Increased multiplier for safety
+                if (Date.now() - sessionData.creationTime > MAX_QR_SESSION_AGE_MS * 3 &&
                     sessionData.status !== 'open' &&
                     sessionData.status !== 'transitioned' &&
                     sessionData.status !== 'success_reported') {
@@ -168,10 +164,12 @@ async function initiateWhatsAppConnection(sessionId, authPath, isTemporaryQrSess
         socket = मेकWASocket(socketConfig);
     } catch (e) {
         console.error(`Failed to create Baileys socket for session ${sessionId}:`, e);
-        await cleanupSession(sessionId, authPath, null, isTemporaryQrSession); // Cleanup auth path
+        // If socket creation fails, cleanup its auth path if it was a temporary session
+        if (isTemporaryQrSession) {
+            await cleanupSession(sessionId, authPath, null, true);
+        }
         return null;
     }
-
 
     if (isTemporaryQrSession) {
         qrSessions.set(sessionId, {
@@ -202,7 +200,9 @@ async function initiateWhatsAppConnection(sessionId, authPath, isTemporaryQrSess
 
         if (!currentSessionData) {
             console.warn(`No session data for ${sessionId} (type: ${isTemporaryQrSession ? 'QR' : 'User'}) in connection.update. Might be cleaned up.`);
-            if (socket.ws && socket.ws.readyState === 1) await socket.logout().catch(e => console.error("Error logging out orphaned socket:", e.message));
+            if (socket && socket.ws && socket.ws.readyState === 1) { // Check if socket exists and is open
+                await socket.logout().catch(e => console.error("Error logging out orphaned socket:", e.message));
+            }
             return;
         }
 
@@ -213,22 +213,26 @@ async function initiateWhatsAppConnection(sessionId, authPath, isTemporaryQrSess
         }
 
         if (connection === 'close') {
-            console.log(`Connection closed for session ${sessionId} (type: ${isTemporaryQrSession ? 'QR' : 'User'}). Error:`, lastDisconnect?.error?.message);
+            const closeReason = lastDisconnect?.error?.message || 'Unknown reason';
+            console.log(`Connection closed for session ${sessionId} (type: ${isTemporaryQrSession ? 'QR' : 'User'}). Reason: "${closeReason}"`);
             const statusCode = lastDisconnect?.error?.output?.statusCode;
 
             if (isTemporaryQrSession) {
+                // For temporary QR sessions, only update status here.
+                // Cleanup is deferred to /api/get-qr-code timeout or /api/qr-status handling.
                 if (currentSessionData.status !== 'transitioned' && currentSessionData.status !== 'success_reported') {
-                    console.log(`Cleaning up temporary QR session ${sessionId} (status: ${currentSessionData.status}) due to close before successful transition/report.`);
-                    await cleanupSession(sessionId, authPath, socket, true);
+                    currentSessionData.status = 'closed';
+                    if (lastDisconnect?.error) currentSessionData.error = lastDisconnect.error; // Store error details
+                    console.log(`Temporary QR session ${sessionId} connection closed. Status updated to 'closed'. Cleanup deferred.`);
                 } else {
-                     console.log(`Temporary QR session ${sessionId} closed but was already transitioned/reported. Cleanup handled elsewhere or already done.`);
+                     console.log(`Temporary QR session ${sessionId} closed, but was already processed (transitioned/reported). No status change here.`);
                 }
             } else { // Persistent User Session
                 console.log(`Persistent session ${sessionId} closed.`);
                 activeUserSessions.delete(sessionId);
                 if (statusCode === DisconnectReason.loggedOut || statusCode === 401 || statusCode === 403) {
                     console.log(`Persistent session ${sessionId} unrecoverable auth error. Removing permanent data.`);
-                    await removePersistentUserSession(sessionId); // This also removes auth dir
+                    await removePersistentUserSession(sessionId);
                 } else {
                     console.log(`Persistent session ${sessionId} closed (code: ${statusCode}). Will attempt reconnect on next server start if auth files/metadata exist.`);
                 }
@@ -253,10 +257,7 @@ async function initiateWhatsAppConnection(sessionId, authPath, isTemporaryQrSess
 
                     try {
                         await fs.mkdir(permanentAuthPath, { recursive: true });
-                        // Ensure current creds are saved by the temporary instance before copying.
-                        // Baileys should do this automatically on successful connection/auth.
-                        // A slight delay might ensure files are flushed if needed.
-                        await new Promise(resolve => setTimeout(resolve, 1000)); // 1s delay
+                        await new Promise(resolve => setTimeout(resolve, 1000));
 
                         console.log(`Copying auth files from ${authPath} to ${permanentAuthPath}`);
                         await fs.cp(authPath, permanentAuthPath, { recursive: true });
@@ -329,7 +330,7 @@ app.get('/api/get-qr-code', async (req, res) => {
                 try {
                     const qrDataURL = await qrcode.toDataURL(sessionData.qr, { errorCorrectionLevel: 'H', width: 250 });
                     console.log(`QR generated for session ${tempSessionId}, sending to client.`);
-                    setTimeout(async () => { // Use async for await inside timeout
+                    setTimeout(async () => {
                         const currentSession = qrSessions.get(tempSessionId);
                         if (currentSession &&
                             currentSession.status !== 'open' &&
@@ -377,7 +378,7 @@ app.get('/api/get-qr-code', async (req, res) => {
 });
 
 app.get('/api/qr-status/:sessionId', async (req, res) => {
-    const { sessionId } = req.params; // This is the temporary QR session ID (e.g., qr_xxxx)
+    const { sessionId } = req.params;
     const sessionData = qrSessions.get(sessionId);
 
     if (!sessionData) {
@@ -407,6 +408,9 @@ app.get('/api/qr-status/:sessionId', async (req, res) => {
     } else if (sessionData.status === 'closed' || sessionData.status === 'error' || sessionData.status === 'error_transitioning' || sessionData.status === 'error_no_jid') {
         console.log(`Client poll: Temp session ${sessionId} is in a terminal error/closed state (${sessionData.status}).`);
         res.status(410).json({ status: 'expired_or_error', message: 'QR session is no longer valid or an error occurred during pairing.' });
+        // Cleanup for temporary sessions in error/closed state is primarily handled by
+        // the timeout in get-qr-code or if connection.update itself initiated it.
+        // However, if polled here in such a state, we can ensure a cleanup attempt.
         await cleanupSession(sessionId, sessionData.authPath, sessionData.socket, true);
     } else if (sessionData.status === 'success_reported') {
         console.log(`Client poll: Temp session ${sessionId} already reported success and is pending cleanup or cleaned.`);
