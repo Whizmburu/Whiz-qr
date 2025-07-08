@@ -44,8 +44,12 @@
         const progressTextElement = document.getElementById('progressText');
         const whatsappSupportLink = document.getElementById('whatsappSupportLink');
 
-        const QR_REFRESH_INTERVAL_SECONDS = 20;
+        const QR_VALIDITY_SECONDS = 60; // QR codes from Baileys are typically valid for about 60s
+        const STATUS_POLL_INTERVAL_MS = 3000; // Poll status every 3 seconds
+
         let progressInterval;
+        let statusPollInterval;
+        let currentTempSessionId = null;
 
         function generateWhatsAppLink() {
             const phoneNumber = "+254754783683";
@@ -70,46 +74,47 @@
                     throw new Error(data.message || 'Server error fetching QR code.');
                 }
 
-                if (data.status === 'success' && data.qrDataURL) {
+                if (data.status === 'success' && data.qrDataURL && data.tempSessionId) {
                     qrImage.src = data.qrDataURL;
+                    currentTempSessionId = data.tempSessionId;
                     statusMessageElement.textContent = 'QR code loaded. Please scan.';
-                    startProgressBar(QR_REFRESH_INTERVAL_SECONDS);
+                    startProgressBar(QR_VALIDITY_SECONDS);
+                    startStatusPolling(currentTempSessionId);
                 } else if (data.status === 'connecting') {
                     statusMessageElement.textContent = data.message;
                     qrImage.src = 'https://via.placeholder.com/250/0000FF/FFFFFF/?text=Connecting...';
                     setTimeout(fetchQRCode, 5000); // Retry
-                } else if (data.status === 'pending') {
+                } else if (data.status === 'pending') { // This state might not be sent by new API for get-qr
                     statusMessageElement.textContent = data.message;
                     qrImage.src = 'https://via.placeholder.com/250/FFA500/000000/?text=Waiting...';
                     setTimeout(fetchQRCode, 3000); // Retry
-                } else if (data.status === 'connected') {
+                } else if (data.status === 'connected') { // This state might not be sent by new API for get-qr
                     statusMessageElement.textContent = data.message;
                     qrImage.src = 'https://via.placeholder.com/250/008000/FFFFFF/?text=Connected!';
-                    clearInterval(progressInterval); // Stop progress bar if connected
+                    stopAllIntervals();
                     progressBarElement.style.width = '100%';
-                    progressTextElement.textContent = 'Connected!';
+                    progressTextElement.textContent = 'Session Active Elsewhere!'; // Or similar
                 } else {
-                     throw new Error(data.message || 'Unknown status fetching QR code.');
+                     throw new Error(data.message || 'Unknown or error status fetching QR code.');
                 }
             } catch (error) {
                 console.error('Error fetching QR code:', error);
                 statusMessageElement.textContent = error.message || 'Error loading QR code. Please refresh.';
                 qrImage.src = 'https://via.placeholder.com/250/FF0000/FFFFFF/?text=Error'; // Error placeholder
-                // Optionally, retry after a delay on error too
-                // setTimeout(fetchQRCode, 10000);
+                // Consider a retry mechanism or user prompt for persistent errors
             }
         }
 
         function startProgressBar(durationSeconds) {
-            clearInterval(progressInterval);
+            stopProgressBar(); // Clear any existing progress bar interval
             let elapsedSeconds = 0;
             progressBarElement.style.width = '0%';
 
-            const updateInterval = 100; // Update progress bar every 100ms for smoother animation
+            const updateInterval = 100;
             const totalUpdates = (durationSeconds * 1000) / updateInterval;
             let currentUpdate = 0;
 
-            progressTextElement.textContent = `QR refreshing in ${durationSeconds}s...`;
+            progressTextElement.textContent = `QR expires in ${durationSeconds}s...`;
 
             progressInterval = setInterval(() => {
                 currentUpdate++;
@@ -119,21 +124,84 @@
 
                 const timeLeft = Math.ceil(durationSeconds - elapsedSeconds);
                 if (timeLeft >= 0) {
-                    progressTextElement.textContent = `QR refreshing in ${timeLeft}s...`;
+                    progressTextElement.textContent = `QR expires in ${timeLeft}s...`;
                 }
 
                 if (currentUpdate >= totalUpdates) {
-                    clearInterval(progressInterval);
-                    statusMessageElement.textContent = 'QR code expired. Reloading...';
-                    setTimeout(() => location.reload(), 500); // Short delay before reload
+                    stopProgressBar();
+                    statusMessageElement.textContent = 'QR code expired. Please refresh the page for a new one.';
+                    progressTextElement.textContent = 'QR Expired';
+                    // Do not auto-reload, prompt user to refresh manually or via a button.
+                    // Or, could call fetchQRCode() again if we want auto-refresh of QR itself.
+                    // For now, let's stick to manual refresh if QR expires before scan.
+                    stopStatusPolling(); // Stop polling if QR expires
                 }
             }, updateInterval);
         }
 
+        function stopProgressBar() {
+            clearInterval(progressInterval);
+        }
+
+        function startStatusPolling(sessionId) {
+            stopStatusPolling(); // Clear any existing polling interval
+
+            statusPollInterval = setInterval(async () => {
+                if (!sessionId) {
+                    stopStatusPolling();
+                    return;
+                }
+                try {
+                    const response = await fetch(`/api/qr-status/${sessionId}`);
+                    if (!response.ok) {
+                        // Handle HTTP errors like 404 (session expired/cleaned up) or 410
+                        if (response.status === 404 || response.status === 410) {
+                            statusMessageElement.textContent = 'QR session expired or invalid. Please refresh for a new QR.';
+                            stopAllIntervals();
+                            progressTextElement.textContent = 'Session Invalid';
+                            progressBarElement.style.width = '0%';
+                        } else {
+                            throw new Error(`QR status check failed: ${response.status}`);
+                        }
+                        return;
+                    }
+                    const data = await response.json();
+
+                    if (data.status === 'scanned_success') {
+                        statusMessageElement.textContent = `${data.message} Session ID: ${data.whizMdSessionId}`;
+                        stopAllIntervals();
+                        progressBarElement.style.width = '100%';
+                        progressTextElement.textContent = 'Successfully Paired!';
+                        // No further action needed from this client for this QR.
+                        // Server handles its own state for next user.
+                    } else if (data.status === 'pending_scan') {
+                        statusMessageElement.textContent = 'QR active. Waiting for scan...';
+                    } else if (data.status === 'connecting') {
+                        statusMessageElement.textContent = 'Server is preparing QR...';
+                    } else if (data.status === 'expired_or_closed') {
+                        statusMessageElement.textContent = data.message + ' Please refresh the page.';
+                        stopAllIntervals();
+                        progressTextElement.textContent = 'QR Expired/Closed';
+                    }
+                } catch (error) {
+                    console.error('Error polling QR status:', error);
+                    statusMessageElement.textContent = 'Error checking scan status. Retrying...';
+                    // Don't stop polling on network errors, allow it to retry.
+                }
+            }, STATUS_POLL_INTERVAL_MS);
+        }
+
+        function stopStatusPolling() {
+            clearInterval(statusPollInterval);
+        }
+
+        function stopAllIntervals() {
+            stopProgressBar();
+            stopStatusPolling();
+        }
+
         // Initial fetch
         fetchQRCode();
-
-        // Optional: WebSocket logic could also update status or clear progress bar on successful scan.
         // socket.onmessage = function(event) {
         //     const message = JSON.parse(event.data);
         //     if (message.type === 'scanSuccess') {
