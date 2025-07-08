@@ -1,26 +1,18 @@
-C:\Users\JOSPHAT MBURU\Desktop\whiz-md-qr>npm start
+C:\Users\JOSPHAT MBURU\Desktop\WHIZ-MD\index.js:60
+const store = makeInMemoryStore({
+              ^
 
-> whiz-md-qr@1.0.0 start
-> node src/server.js
+TypeError: makeInMemoryStore is not a function
+    at Object.<anonymous> (C:\Users\JOSPHAT MBURU\Desktop\WHIZ-MD\index.js:60:15)
+    at Module._compile (node:internal/modules/cjs/loader:1730:14)
+    at Object..js (node:internal/modules/cjs/loader:1895:10)
+    at Module.load (node:internal/modules/cjs/loader:1465:32)
+    at Function._load (node:internal/modules/cjs/loader:1282:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:235:24)
+    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+    at node:internal/main/run_main_module:36:49
 
-WHIZ-MD QR Generator server running on http://localhost:3000
-Connection closed. Intentional Logout: false Auth Error: true Error: Error: Connection Failure
-    at WebSocketClient.<anonymous> (C:\Users\JOSPHAT MBURU\Desktop\whiz-md-qr\node_modules\@whiskeysockets\baileys\lib\Socket\socket.js:529:13)
-    at WebSocketClient.emit (node:events:518:28)
-    at C:\Users\JOSPHAT MBURU\Desktop\whiz-md-qr\node_modules\@whiskeysockets\baileys\lib\Socket\socket.js:241:35
-    at Object.decodeFrame (C:\Users\JOSPHAT MBURU\Desktop\whiz-md-qr\node_modules\@whiskeysockets\baileys\lib\Utils\noise-handler.js:144:17)
-    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
-  data: { reason: '401', location: 'atn' },
-  isBoom: true,
-  isServer: false,
-  output: {
-    statusCode: 401,
-    payload: {
-      statusCode: 401,
-      error: 'Unauthorized',
-      message: 'Connection Failure'
-    },
-    headers: {}
-  }
-}
-Not reconnecting due to unrecoverable auth error. A new QR scan will be needed.
+Node.js v22.17.0
+
+C:\Users\JOSPHAT MBURU\Desktop\WHIZ-MD>
