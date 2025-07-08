@@ -15,8 +15,8 @@
   "author": "WHIZ",
   "license": "ISC",
   "dependencies": {
-    "express": "^4.17.1", // For the web server
-    "qrcode": "^1.4.4",   // For generating QR codes
-    "@whiskeysockets/baileys": "^6.5.0" // For WhatsApp Web interaction
+    "express": "^4.17.1",
+    "qrcode": "^1.4.4",
+    "@whiskeysockets/baileys": "^6.5.0"
   }
 }
