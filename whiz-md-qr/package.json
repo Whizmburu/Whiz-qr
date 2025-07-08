@@ -17,8 +17,6 @@
   "dependencies": {
     "express": "^4.17.1", // For the web server
     "qrcode": "^1.4.4",   // For generating QR codes
-    "@whiskeysockets/baileys": "^6.5.0" // For WhatsApp Web interaction (or a similar library)
-    // We might need a specific WhatsApp library that generates QR codes for pairing.
-    // Baileys is a good candidate, but we'll confirm its QR generation capabilities.
+    "@whiskeysockets/baileys": "^6.5.0" // For WhatsApp Web interaction
   }
 }

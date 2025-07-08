@@ -79,11 +79,66 @@ p {
     font-weight: 700;
 }
 
+.progress-bar-container {
+    width: 100%;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 5px;
+    height: 10px;
+    margin-top: 25px;
+    margin-bottom: 5px;
+    overflow: hidden; /* Ensures the inner bar stays within rounded corners */
+}
+
+.progress-bar {
+    width: 0%;
+    height: 100%;
+    background-color: #ffdd57; /* Same as timer text for consistency */
+    border-radius: 5px;
+    transition: width 0.1s linear; /* Smooth transition for progress updates */
+}
+
+.progress-text {
+    font-size: 0.85em;
+    color: #e0e0e0;
+    margin-top: 5px;
+    margin-bottom: 20px;
+}
+
 .status-message {
     font-size: 0.9em;
     color: #c0c0c0;
     min-height: 1.2em; /* Reserve space to prevent layout shifts */
+    margin-bottom: 25px;
 }
+
+.report-issue {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.report-issue p {
+    font-size: 0.9em;
+    margin-bottom: 10px;
+    color: #f0f0f0;
+}
+
+.icon-link {
+    display: inline-block;
+    margin: 0 10px;
+    padding: 8px 12px;
+    background-color: rgba(255, 255, 255, 0.15);
+    color: #fff;
+    text-decoration: none;
+    border-radius: 5px;
+    font-weight: bold;
+    transition: background-color 0.3s ease;
+}
+
+.icon-link:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+}
+
 
 /* Responsive adjustments */
 @media (max-width: 480px) {

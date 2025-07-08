@@ -17,18 +17,46 @@
                 <img id="qrImage" src="" alt="WhatsApp QR Code">
             </div>
             <p>Scan this QR code with WhatsApp (Linked Devices > Link a device).</p>
-            <div class="timer">
-                <p>QR code refreshes in: <span id="countdown">60</span>s</p>
+
+            <div class="progress-bar-container">
+                <div id="progressBar" class="progress-bar"></div>
             </div>
+            <p id="progressText" class="progress-text">QR refreshing in 20s...</p>
+
             <p class="status-message" id="statusMessage"></p>
+
+            <div class="report-issue">
+                <p>Having trouble? Report an issue:</p>
+                <a href="https://github.com/whizmburu" target="_blank" class="icon-link" aria-label="Report issue on GitHub">
+                    GH <!-- Placeholder for GitHub Icon -->
+                </a>
+                <a id="whatsappSupportLink" href="#" target="_blank" class="icon-link" aria-label="Report issue via WhatsApp">
+                    WA <!-- Placeholder for WhatsApp Icon -->
+                </a>
+            </div>
         </div>
     </div>
 
     <script>
         const qrImage = document.getElementById('qrImage');
-        const countdownElement = document.getElementById('countdown');
         const statusMessageElement = document.getElementById('statusMessage');
-        let countdownInterval;
+        const progressBarElement = document.getElementById('progressBar');
+        const progressTextElement = document.getElementById('progressText');
+        const whatsappSupportLink = document.getElementById('whatsappSupportLink');
+
+        const QR_REFRESH_INTERVAL_SECONDS = 20;
+        let progressInterval;
+
+        function generateWhatsAppLink() {
+            const phoneNumber = "+254754783683";
+            const text = "Hello Whiz💥💥I have an issue Scanning Qr code 👾🤣Kindly Help😋🕳";
+            // Ensure characters are properly URL encoded
+            const encodedText = encodeURIComponent(text);
+            // Universal WhatsApp link format
+            return `https://wa.me/${phoneNumber.replace('+', '')}?text=${encodedText}`;
+        }
+
+        whatsappSupportLink.href = generateWhatsAppLink();
 
         async function fetchQRCode() {
             try {
@@ -45,20 +73,21 @@
                 if (data.status === 'success' && data.qrDataURL) {
                     qrImage.src = data.qrDataURL;
                     statusMessageElement.textContent = 'QR code loaded. Please scan.';
-                    startCountdown(60); // Start countdown for refresh
+                    startProgressBar(QR_REFRESH_INTERVAL_SECONDS);
                 } else if (data.status === 'connecting') {
                     statusMessageElement.textContent = data.message;
                     qrImage.src = 'https://via.placeholder.com/250/0000FF/FFFFFF/?text=Connecting...';
-                    setTimeout(fetchQRCode, 5000); // Retry after 5 seconds if still connecting
+                    setTimeout(fetchQRCode, 5000); // Retry
                 } else if (data.status === 'pending') {
                     statusMessageElement.textContent = data.message;
                     qrImage.src = 'https://via.placeholder.com/250/FFA500/000000/?text=Waiting...';
-                    setTimeout(fetchQRCode, 3000); // Retry after 3 seconds if pending
+                    setTimeout(fetchQRCode, 3000); // Retry
                 } else if (data.status === 'connected') {
                     statusMessageElement.textContent = data.message;
                     qrImage.src = 'https://via.placeholder.com/250/008000/FFFFFF/?text=Connected!';
-                    clearInterval(countdownInterval);
-                    countdownElement.textContent = 'N/A';
+                    clearInterval(progressInterval); // Stop progress bar if connected
+                    progressBarElement.style.width = '100%';
+                    progressTextElement.textContent = 'Connected!';
                 } else {
                      throw new Error(data.message || 'Unknown status fetching QR code.');
                 }
@@ -71,27 +100,40 @@
             }
         }
 
-        function startCountdown(seconds) {
-            clearInterval(countdownInterval); // Clear any existing interval
-            let timeLeft = seconds;
-            countdownElement.textContent = timeLeft;
-            countdownInterval = setInterval(() => {
-                timeLeft--;
-                countdownElement.textContent = timeLeft;
-                if (timeLeft < 0) { // Changed to < 0 to allow 0 to display briefly
-                    clearInterval(countdownInterval);
-                    statusMessageElement.textContent = 'QR code expired. Refreshing...';
-                    fetchQRCode(); // Fetch a new QR code
+        function startProgressBar(durationSeconds) {
+            clearInterval(progressInterval);
+            let elapsedSeconds = 0;
+            progressBarElement.style.width = '0%';
+
+            const updateInterval = 100; // Update progress bar every 100ms for smoother animation
+            const totalUpdates = (durationSeconds * 1000) / updateInterval;
+            let currentUpdate = 0;
+
+            progressTextElement.textContent = `QR refreshing in ${durationSeconds}s...`;
+
+            progressInterval = setInterval(() => {
+                currentUpdate++;
+                elapsedSeconds = (currentUpdate * updateInterval) / 1000;
+                const percentage = (currentUpdate / totalUpdates) * 100;
+                progressBarElement.style.width = percentage + '%';
+
+                const timeLeft = Math.ceil(durationSeconds - elapsedSeconds);
+                if (timeLeft >= 0) {
+                    progressTextElement.textContent = `QR refreshing in ${timeLeft}s...`;
                 }
-            }, 1000);
+
+                if (currentUpdate >= totalUpdates) {
+                    clearInterval(progressInterval);
+                    statusMessageElement.textContent = 'QR code expired. Reloading...';
+                    setTimeout(() => location.reload(), 500); // Short delay before reload
+                }
+            }, updateInterval);
         }
 
         // Initial fetch
         fetchQRCode();
 
-        // Optional: Implement WebSocket connection here to listen for scan success from the server
-        // and for new QR codes pushed by the server.
-        // const socket = new WebSocket('ws://localhost:3000'); // Adjust URL as needed
+        // Optional: WebSocket logic could also update status or clear progress bar on successful scan.
         // socket.onmessage = function(event) {
         //     const message = JSON.parse(event.data);
         //     if (message.type === 'scanSuccess') {
