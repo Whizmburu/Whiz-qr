@@ -218,17 +218,17 @@ async function initiateWhatsAppConnection(sessionId, authPath, isTemporaryQrSess
             const statusCode = lastDisconnect?.error?.output?.statusCode;
 
             if (isTemporaryQrSession) {
-                // For temporary QR sessions, only update status here.
-                // Cleanup is deferred to /api/get-qr-code timeout or /api/qr-status handling.
-                if (currentSessionData.status !== 'transitioned' && currentSessionData.status !== 'success_reported') {
-                    currentSessionData.status = 'closed';
-                    if (lastDisconnect?.error) currentSessionData.error = lastDisconnect.error; // Store error details
-                    console.log(`Temporary QR session ${sessionId} connection closed. Status updated to 'closed'. Cleanup deferred.`);
+                if (currentSessionData.status !== 'transitioned_to_permanent' && currentSessionData.status !== 'success_reported_by_client') {
+                    currentSessionData.status = 'closed_early_error'; // New distinct status
+                    currentSessionData.error = lastDisconnect?.error || new Error('Unknown close reason'); // Store error
+                    console.log(`Temporary QR session ${sessionId} connection closed prematurely or with error. Status: 'closed_early_error'. Reason: ${closeReason}. Cleanup deferred.`);
                 } else {
-                     console.log(`Temporary QR session ${sessionId} closed, but was already processed (transitioned/reported). No status change here.`);
+                    // If it was already transitioned or reported, its cleanup is handled by qr-status or the main timeout.
+                    // This 'close' event might be for the socket after we've decided to clean it up.
+                    console.log(`Temporary QR session ${sessionId} closed (status: ${currentSessionData.status}). Normal if already processed.`);
                 }
             } else { // Persistent User Session
-                console.log(`Persistent session ${sessionId} closed.`);
+                console.log(`Persistent session ${sessionId} closed. Removing from activeUserSessions.`);
                 activeUserSessions.delete(sessionId);
                 if (statusCode === DisconnectReason.loggedOut || statusCode === 401 || statusCode === 403) {
                     console.log(`Persistent session ${sessionId} unrecoverable auth error. Removing permanent data.`);
@@ -284,16 +284,16 @@ async function initiateWhatsAppConnection(sessionId, authPath, isTemporaryQrSess
                             userJid: userJid
                         });
 
-                        currentSessionData.status = 'transitioned';
-                        console.log(`Session for ${userJid} marked as transitioned. Temp session ${sessionId} will be cleaned by qr-status or timeout.`);
+                        currentSessionData.status = 'transitioned_to_permanent'; // New distinct status
+                        console.log(`Session for ${userJid} marked as 'transitioned_to_permanent'. Temp session ${sessionId} will be cleaned by qr-status or its expiry timeout.`);
 
                     } catch (error) {
                         console.error(`Error during transition to persistent session for ${userJid} (temp ${sessionId}):`, error);
-                        currentSessionData.status = 'error_transitioning';
+                        currentSessionData.status = 'error_transitioning'; // Mark error
                     }
                 } else {
                     console.warn(`Connection opened for temp session ${sessionId}, but no user.id. Cannot transition.`);
-                    currentSessionData.status = 'error_no_jid';
+                    currentSessionData.status = 'error_no_jid'; // Mark error
                 }
             } else if (!isTemporaryQrSession && connection === 'open') {
                  const sessionDetails = activeUserSessions.get(sessionId);
@@ -332,14 +332,18 @@ app.get('/api/get-qr-code', async (req, res) => {
                     console.log(`QR generated for session ${tempSessionId}, sending to client.`);
                     setTimeout(async () => {
                         const currentSession = qrSessions.get(tempSessionId);
+                        // Check if the session still exists and was not successfully processed
                         if (currentSession &&
-                            currentSession.status !== 'open' &&
-                            currentSession.status !== 'transitioned' &&
-                            currentSession.status !== 'success_reported') {
-                            console.log(`QR session ${tempSessionId} timed out (${QR_VALIDITY_SECONDS}s) before being confirmed as scanned by client, cleaning up.`);
-                            await cleanupSession(tempSessionId, currentSession.authPath, currentSession.socket);
+                            currentSession.status !== 'transitioned_to_permanent' &&
+                            currentSession.status !== 'success_reported_by_client') {
+                            console.log(`Master timeout for temp QR session ${tempSessionId} (status: ${currentSession.status}). Cleaning up as it was not successfully processed.`);
+                            await cleanupSession(tempSessionId, currentSession.authPath, currentSession.socket, true); // true to remove from map
+                        } else if (currentSession) {
+                            console.log(`Master timeout for temp QR session ${tempSessionId}, but its status is '${currentSession.status}'. Cleanup likely handled or not needed now.`);
+                        } else {
+                            console.log(`Master timeout for temp QR session ${tempSessionId}, but it's no longer in the map (already cleaned up).`);
                         }
-                    }, QR_VALIDITY_SECONDS * 1000 + 5000);
+                    }, QR_VALIDITY_SECONDS * 1000 + 10000); // Increased buffer slightly to 10s post-QR validity
 
                     res.json({ status: 'success', qrDataURL: qrDataURL, tempSessionId: tempSessionId });
                 } catch (err) {
@@ -385,8 +389,9 @@ app.get('/api/qr-status/:sessionId', async (req, res) => {
         return res.status(404).json({ status: 'expired_or_not_found', message: 'Session not found, expired, or already processed.' });
     }
 
-    if ((sessionData.status === 'open' || sessionData.status === 'transitioned') && sessionData.userJid && sessionData.whizMdSessionId) {
-        console.log(`Client poll: Success for temp session ${sessionId}. User: ${sessionData.userJid}. WHIZ-MD ID: ${sessionData.whizMdSessionId}. Status: ${sessionData.status}`);
+    // Primary success path: QR scanned, data transitioned, ready to inform client
+    if (sessionData.status === 'transitioned_to_permanent' && sessionData.userJid && sessionData.whizMdSessionId) {
+        console.log(`Client poll: Temp session ${sessionId} successfully transitioned. User: ${sessionData.userJid}. WHIZ-MD ID: ${sessionData.whizMdSessionId}.`);
         res.json({
             status: 'scanned_success',
             message: 'Successfully paired!',
