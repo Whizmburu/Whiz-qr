@@ -16,3 +16,6 @@ TypeError: makeInMemoryStore is not a function
 Node.js v22.17.0
 
 C:\Users\JOSPHAT MBURU\Desktop\WHIZ-MD>
+
+----
+Fix Error above, plus ensure after connection of 1  device and obtained session id i can tap 
