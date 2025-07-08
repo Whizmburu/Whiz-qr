@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WHIZ-MD QR Code</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="https://i.ibb.co/dsbcdSPX/whizmd.png" type="image/png">
+</head>
+<body>
+    <div class="container">
+        <div class="qr-card">
+            <img src="whizmd.png" alt="WHIZ-MD Logo" class="brand-logo-header">
+            <h1>Scan to Link with WHIZ-MD</h1>
+            <div class="qr-code-container">
+                <!-- QR code will be dynamically inserted here -->
+                <img id="qrImage" src="" alt="WhatsApp QR Code">
+            </div>
+            <p>Scan this QR code with WhatsApp (Linked Devices > Link a device).</p>
+
+            <div class="progress-bar-container">
+                <div id="progressBar" class="progress-bar"></div>
+            </div>
+            <p id="progressText" class="progress-text">QR refreshing in 20s...</p>
+
+            <p class="status-message" id="statusMessage"></p>
+
+            <div class="report-issue">
+                <p>Having trouble? Report an issue:</p>
+                <a href="https://github.com/whizmburu" target="_blank" class="icon-link" aria-label="Report issue on GitHub">
+                    GH <!-- Placeholder for GitHub Icon -->
+                </a>
+                <a id="whatsappSupportLink" href="#" target="_blank" class="icon-link" aria-label="Report issue via WhatsApp">
+                    WA <!-- Placeholder for WhatsApp Icon -->
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const qrImage = document.getElementById('qrImage');
+        const statusMessageElement = document.getElementById('statusMessage');
+        const progressBarElement = document.getElementById('progressBar');
+        const progressTextElement = document.getElementById('progressText');
+        const whatsappSupportLink = document.getElementById('whatsappSupportLink');
+
+        const QR_REFRESH_INTERVAL_SECONDS = 20;
+        let progressInterval;
+
+        function generateWhatsAppLink() {
+            const phoneNumber = "+254754783683";
+            const text = "Hello Whiz💥💥I have an issue Scanning Qr code 👾🤣Kindly Help😋🕳";
+            // Ensure characters are properly URL encoded
+            const encodedText = encodeURIComponent(text);
+            // Universal WhatsApp link format
+            return `https://wa.me/${phoneNumber.replace('+', '')}?text=${encodedText}`;
+        }
+
+        whatsappSupportLink.href = generateWhatsAppLink();
+
+        async function fetchQRCode() {
+            try {
+                statusMessageElement.textContent = 'Fetching QR code...';
+                qrImage.src = ''; // Clear previous QR
+
+                const response = await fetch('/api/get-qr-code');
+                const data = await response.json();
+
+                if (response.status === 500) {
+                    throw new Error(data.message || 'Server error fetching QR code.');
+                }
+
+                if (data.status === 'success' && data.qrDataURL) {
+                    qrImage.src = data.qrDataURL;
+                    statusMessageElement.textContent = 'QR code loaded. Please scan.';
+                    startProgressBar(QR_REFRESH_INTERVAL_SECONDS);
+                } else if (data.status === 'connecting') {
+                    statusMessageElement.textContent = data.message;
+                    qrImage.src = 'https://via.placeholder.com/250/0000FF/FFFFFF/?text=Connecting...';
+                    setTimeout(fetchQRCode, 5000); // Retry
+                } else if (data.status === 'pending') {
+                    statusMessageElement.textContent = data.message;
+                    qrImage.src = 'https://via.placeholder.com/250/FFA500/000000/?text=Waiting...';
+                    setTimeout(fetchQRCode, 3000); // Retry
+                } else if (data.status === 'connected') {
+                    statusMessageElement.textContent = data.message;
+                    qrImage.src = 'https://via.placeholder.com/250/008000/FFFFFF/?text=Connected!';
+                    clearInterval(progressInterval); // Stop progress bar if connected
+                    progressBarElement.style.width = '100%';
+                    progressTextElement.textContent = 'Connected!';
+                } else {
+                     throw new Error(data.message || 'Unknown status fetching QR code.');
+                }
+            } catch (error) {
+                console.error('Error fetching QR code:', error);
+                statusMessageElement.textContent = error.message || 'Error loading QR code. Please refresh.';
+                qrImage.src = 'https://via.placeholder.com/250/FF0000/FFFFFF/?text=Error'; // Error placeholder
+                // Optionally, retry after a delay on error too
+                // setTimeout(fetchQRCode, 10000);
+            }
+        }
+
+        function startProgressBar(durationSeconds) {
+            clearInterval(progressInterval);
+            let elapsedSeconds = 0;
+            progressBarElement.style.width = '0%';
+
+            const updateInterval = 100; // Update progress bar every 100ms for smoother animation
+            const totalUpdates = (durationSeconds * 1000) / updateInterval;
+            let currentUpdate = 0;
+
+            progressTextElement.textContent = `QR refreshing in ${durationSeconds}s...`;
+
+            progressInterval = setInterval(() => {
+                currentUpdate++;
+                elapsedSeconds = (currentUpdate * updateInterval) / 1000;
+                const percentage = (currentUpdate / totalUpdates) * 100;
+                progressBarElement.style.width = percentage + '%';
+
+                const timeLeft = Math.ceil(durationSeconds - elapsedSeconds);
+                if (timeLeft >= 0) {
+                    progressTextElement.textContent = `QR refreshing in ${timeLeft}s...`;
+                }
+
+                if (currentUpdate >= totalUpdates) {
+                    clearInterval(progressInterval);
+                    statusMessageElement.textContent = 'QR code expired. Reloading...';
+                    setTimeout(() => location.reload(), 500); // Short delay before reload
+                }
+            }, updateInterval);
+        }
+
+        // Initial fetch
+        fetchQRCode();
+
+        // Optional: WebSocket logic could also update status or clear progress bar on successful scan.
+        // socket.onmessage = function(event) {
+        //     const message = JSON.parse(event.data);
+        //     if (message.type === 'scanSuccess') {
+        //         statusMessageElement.textContent = 'Successfully Paired! Session ID: ' + message.sessionId;
+        //         clearInterval(countdownInterval);
+        //         // Optionally redirect or show more info
+        //     } else if (message.type === 'newQR') {
+        //          qrImage.src = message.qrDataUrl;
+        //          startCountdown(60);
+        //     }
+        // };
+    </script>
+</body>
+</html>
