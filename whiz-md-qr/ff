@@ -1,0 +1,26 @@
+C:\Users\JOSPHAT MBURU\Desktop\whiz-md-qr>npm start
+
+> whiz-md-qr@1.0.0 start
+> node src/server.js
+
+WHIZ-MD QR Generator server running on http://localhost:3000
+Connection closed. Intentional Logout: false Auth Error: true Error: Error: Connection Failure
+    at WebSocketClient.<anonymous> (C:\Users\JOSPHAT MBURU\Desktop\whiz-md-qr\node_modules\@whiskeysockets\baileys\lib\Socket\socket.js:529:13)
+    at WebSocketClient.emit (node:events:518:28)
+    at C:\Users\JOSPHAT MBURU\Desktop\whiz-md-qr\node_modules\@whiskeysockets\baileys\lib\Socket\socket.js:241:35
+    at Object.decodeFrame (C:\Users\JOSPHAT MBURU\Desktop\whiz-md-qr\node_modules\@whiskeysockets\baileys\lib\Utils\noise-handler.js:144:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  data: { reason: '401', location: 'atn' },
+  isBoom: true,
+  isServer: false,
+  output: {
+    statusCode: 401,
+    payload: {
+      statusCode: 401,
+      error: 'Unauthorized',
+      message: 'Connection Failure'
+    },
+    headers: {}
+  }
+}
+Not reconnecting due to unrecoverable auth error. A new QR scan will be needed.
