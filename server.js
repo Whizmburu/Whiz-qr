@@ -128,12 +128,16 @@ async function startBaileys(type, phoneNumberForPairingCode = null) {
             console.log('Connection closed due to ', lastDisconnect.error, ', reconnecting ', shouldReconnect);
 
             if (clientWs && clientWs.readyState === WebSocket.OPEN) {
-                 clientWs.send(JSON.stringify({ event: 'statusUpdate', message: `Connection Closed: ${lastDisconnect.error}. ${shouldReconnect ? 'Attempting to reconnect...' : 'Logged out.'}` }));
+                 clientWs.send(JSON.stringify({ event: 'statusUpdate', message: `Connection Closed: ${lastDisconnect.error}. ${shouldReconnect ? 'Attempting to reconnect (manual restart might be needed)...' : 'Logged out.'}` }));
             }
             if (shouldReconnect) {
-                // startBaileys(type, pairingData.userPhoneNumber); // Reconnect logic might be needed here
+                console.log("Should reconnect is true, but automatic restart is currently disabled. Clearing socket.");
+                sock = null; // Ensure socket is cleared for a potential manual or future automatic restart.
+                // To enable auto-reconnect, uncomment the line below, but be cautious of spamming if the error is persistent.
+                // await startBaileys(pairingData.type || type, pairingData.userPhoneNumber);
             } else {
-                console.log("Logged out, not reconnecting. Cleaning up session.");
+                console.log("Logged out or non-recoverable error, not reconnecting. Cleaning up session.");
+                sock = null; // Clear the socket
                  try {
                     // Optional: Clean up session files on logout
                     // await fs.rm(path.join(sessionsDir, `session-${type}`), { recursive: true, force: true });
