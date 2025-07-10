@@ -1,55 +1,112 @@
 body {
-    font-family: Arial, sans-serif;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     margin: 0;
-    padding: 0;
-    background-color: #f4f4f4;
+    padding: 20px; /* Add some padding around the body */
+    background-color: #f0f2f5; /* Light grey background */
     color: #333;
     display: flex;
     justify-content: center;
-    align-items: center;
+    align-items: flex-start; /* Align items to the top */
     min-height: 100vh;
     text-align: center;
+    box-sizing: border-box;
 }
 
 .container {
-    background-color: #fff;
+    background-color: #ffffff;
     padding: 30px 40px;
-    border-radius: 10px;
-    box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
-    max-width: 500px;
-    width: 90%;
+    border-radius: 12px; /* Slightly more rounded corners */
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1); /* Softer shadow */
+    max-width: 700px; /* Wider container for card layout */
+    width: 100%; /* Responsive width */
+    margin-top: 20px; /* Space from top */
+    box-sizing: border-box;
 }
 
 h1 {
-    color: #2c3e50;
-    margin-bottom: 20px;
+    color: #1877f2; /* Facebook-like blue */
+    margin-bottom: 10px; /* Adjusted margin */
+    font-size: 2em; /* Larger h1 */
+}
+.container > h1 { /* Specifically for main page title */
+     margin-bottom: 15px;
 }
 
-p {
-    font-size: 1.1em;
-    margin-bottom: 25px;
+
+p.subtitle { /* For the main page subtitle */
+    font-size: 1.2em;
+    color: #555;
+    margin-bottom: 40px; /* More space before cards */
     line-height: 1.6;
 }
 
-.options button, button {
-    background-color: #3498db;
-    color: white;
-    border: none;
-    padding: 15px 25px;
-    text-align: center;
-    text-decoration: none;
+
+/* Card layout for index page */
+.pairing-options {
+    display: flex;
+    flex-direction: column; /* Stack cards vertically on small screens */
+    gap: 25px; /* Space between cards */
+    margin-bottom: 30px;
+}
+
+.option-card {
+    background-color: #f9f9f9; /* Light background for cards */
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 25px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+    text-align: left;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.option-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+}
+
+.option-card h2 {
+    font-size: 1.5em;
+    color: #1877f2; /* Primary color for headings */
+    margin-top: 0;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+}
+
+.option-card h2 i {
+    margin-right: 12px; /* Space between icon and text */
+    color: #1877f2; /* Icon color */
+}
+
+.option-card .description {
+    font-size: 1em;
+    color: #333;
+    line-height: 1.6;
+    margin-bottom: 20px;
+}
+
+.btn-select, button#generate-code-btn { /* Apply to all main action buttons */
     display: inline-block;
-    font-size: 16px;
-    margin: 10px 5px;
+    background-color: #1877f2; /* Primary blue */
+    color: white;
+    padding: 12px 20px;
+    text-decoration: none;
+    border: none;
+    border-radius: 6px; /* Consistent border-radius */
+    font-weight: bold;
+    font-size: 1em;
     cursor: pointer;
-    border-radius: 5px;
-    transition: background-color 0.3s ease;
+    transition: background-color 0.3s ease, box-shadow 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.options button:hover, button:hover {
-    background-color: #2980b9;
+.btn-select:hover, button#generate-code-btn:hover {
+    background-color: #166fe5; /* Darker blue on hover */
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
 }
 
+
+/* QR Page and Pairing Code Page specific styles */
 #qr-code-container img {
     margin: 20px auto;
     display: block;
@@ -58,59 +115,134 @@ p {
     border: 5px solid #eee;
     border-radius: 5px;
 }
-
-#pairing-code-container {
-    margin: 20px 0;
-    padding: 15px;
-    background-color: #eaf2f8;
-    border: 1px solid #d1e0e0;
-    border-radius: 5px;
-    font-size: 1.5em;
-    font-weight: bold;
-    color: #1abc9c;
+#qr-code-container p, #pairing-code-container p { /* For loading/status messages within these containers */
+    font-size: 1.1em;
+    color: #555;
 }
 
+
+#pairing-code-container {
+    margin: 25px 0;
+    padding: 20px;
+    background-color: #e9f5ff; /* Lighter blue background */
+    border: 1px solid #b3d4fc; /* Light blue border */
+    border-radius: 8px;
+    font-size: 1.6em; /* Larger pairing code */
+    font-weight: bold;
+    color: #0056b3; /* Darker blue for the code itself */
+    word-break: break-all; /* Ensure long codes don't overflow */
+}
+#pairing-code-container strong { /* If pairing code is wrapped in strong */
+    color: #1877f2;
+}
+
+
 .phone-input-container {
-    margin: 20px 0;
+    margin: 25px 0;
+    text-align: left; /* Align label and input to left */
 }
 
 .phone-input-container label {
     display: block;
-    margin-bottom: 8px;
-    font-weight: bold;
-    color: #555;
+    margin-bottom: 10px; /* More space below label */
+    font-weight: 600; /* Slightly bolder label */
+    color: #333;
+    font-size: 1.05em;
 }
 
 .phone-input-container input[type="tel"] {
-    width: calc(100% - 22px); /* Account for padding and border */
-    padding: 10px;
-    margin-bottom: 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
+    width: calc(100% - 24px); /* Full width minus padding & border */
+    padding: 12px; /* More padding */
+    margin-bottom: 15px; /* More space below input */
+    border: 1px solid #ddd; /* Lighter border */
+    border-radius: 6px; /* Consistent border-radius */
     font-size: 1em;
+    box-sizing: border-box; /* Include padding and border in the element's total width and height */
+}
+.phone-input-container input[type="tel"]:focus {
+    border-color: #1877f2; /* Highlight on focus */
+    box-shadow: 0 0 0 2px rgba(24, 119, 242, 0.2); /* Focus ring */
+    outline: none;
 }
 
+
 #status-message {
-    margin-top: 20px;
-    font-weight: bold;
+    margin-top: 25px;
+    font-weight: 500; /* Medium weight */
+    font-size: 1.1em; /* Slightly larger status messages */
+    padding: 10px;
+    border-radius: 6px;
+    line-height: 1.5;
 }
 
 .success {
-    color: green;
+    color: #155724; /* Dark green for success text */
+    background-color: #d4edda; /* Light green background */
+    border: 1px solid #c3e6cb; /* Green border */
 }
 
 .error {
-    color: red;
+    color: #721c24; /* Dark red for error text */
+    background-color: #f8d7da; /* Light red background */
+    border: 1px solid #f5c6cb; /* Red border */
 }
 
-a {
-    display: inline-block;
-    margin-top: 20px;
-    color: #3498db;
+.back-link { /* For "Back to Home" links */
+    display: inline-flex; /* Align icon and text */
+    align-items: center;
+    margin-top: 25px;
+    color: #1877f2;
     text-decoration: none;
-    font-size: 0.9em;
+    font-size: 1em; /* Larger back link */
+    font-weight: 500;
+}
+.back-link i {
+    margin-right: 6px; /* Space between icon and text */
 }
 
-a:hover {
+.back-link:hover {
     text-decoration: underline;
+    color: #166fe5;
+}
+
+.footer-info {
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid #e0e0e0;
+    font-size: 0.9em;
+    color: #777;
+}
+
+
+/* Responsive adjustments for smaller screens */
+@media (max-width: 768px) {
+    .container {
+        padding: 20px; /* Less padding on smaller screens */
+        margin-top: 10px;
+    }
+    h1 {
+        font-size: 1.8em;
+    }
+    .pairing-options {
+        flex-direction: column; /* Ensure cards are stacked */
+    }
+    .option-card {
+        padding: 20px;
+    }
+    .option-card h2 {
+        font-size: 1.3em;
+    }
+    .btn-select, button#generate-code-btn {
+        padding: 10px 15px;
+        font-size: 0.95em;
+    }
+}
+
+@media (min-width: 768px) { /* For index page card layout on wider screens */
+    .pairing-options {
+        flex-direction: row;
+    }
+    .option-card {
+        flex: 1;
+    }
 }

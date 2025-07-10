@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pair with Code - Whiz-MD</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <h1><i class="fas fa-mobile-alt"></i> Pair with Phone Number</h1>
+        <div class="phone-input-container">
+            <label for="phone-number-code">Enter your WhatsApp Phone Number to generate a Pairing Code:</label>
+            <input type="tel" id="phone-number-code" placeholder="e.g., 254754783683" aria-label="Phone Number for Pairing Code">
+            <button id="generate-code-btn" class="btn-select">Generate Code</button>
+        </div>
+        <div id="pairing-code-container">
+            <!-- Pairing code will be displayed here by script.js -->
+            <p>Enter your phone number above and click "Generate Code".</p>
+        </div>
+        <div id="status-message"></div>
+        <a href="/" class="back-link"><i class="fas fa-arrow-left"></i> Back to Home</a>
+    </div>
+    <script src="/script.js"></script> <!-- Ensure script.js is correctly referenced if moved -->
+</body>
+</html>
