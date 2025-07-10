@@ -11,13 +11,15 @@ function connectWebSocket() {
     socket = new WebSocket(wsUrl);
 
     socket.onopen = () => {
-        console.log('WebSocket connection established.');
+        console.log('WebSocket connection established. Path:', window.location.pathname);
         // Inform the backend which page is active, if necessary, or send initial request
         const path = window.location.pathname;
-        if (path.includes('qr.html')) {
-            const phoneNumberInput = document.getElementById('phone-number-qr');
-            // Send phone number immediately if available, or it can be sent on demand
-            socket.send(JSON.stringify({ type: 'requestQr', phoneNumber: phoneNumberInput.value }));
+        // Path can be /qr or /qr.html (or /views/qr.ejs if accessed directly, though not typical)
+        if (path.endsWith('/qr') || path.includes('qr.html') || path.includes('qr.ejs')) {
+            console.log('QR page detected, sending requestQr.');
+            socket.send(JSON.stringify({ type: 'requestQr' }));
+        } else {
+            console.log('Not on QR page, or path not recognized for initial QR request:', path);
         }
         // For pairing code, the request is typically triggered by a button click after entering phone number
     };
