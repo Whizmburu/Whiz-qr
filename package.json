@@ -1,0 +1,23 @@
+{
+  "name": "whiz-md-pairing-app",
+  "version": "1.0.0",
+  "description": "Whiz-MD Multi-Device Pairing Web App",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "baileys",
+    "whatsapp",
+    "pairing"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.2",
+    "express": "^4.19.2",
+    "qrcode": "^1.5.3",
+    "ws": "^8.17.0"
+  }
+}
