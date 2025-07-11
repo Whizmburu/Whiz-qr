@@ -114,11 +114,17 @@ document.addEventListener('DOMContentLoaded', () => {
     connectWebSocket(); // Establish WebSocket connection as soon as DOM is loaded
 
     const path = window.location.pathname;
+    console.log('DOMContentLoaded. Current path:', path);
 
-    if (path.includes('qr.html')) {
+    // Path can be /qr or /qr.html (or /views/qr.ejs if accessed directly, though not typical)
+    if (path.endsWith('/qr') || path.includes('qr.html') || path.includes('qr.ejs')) {
+        console.log('Initializing QR Page');
         initQrPage();
-    } else if (path.includes('pairing_code.html')) {
+    } else if (path.endsWith('/pairing-code') || path.includes('pairing_code.html') || path.includes('pairing_code.ejs')) {
+        console.log('Initializing Pairing Code Page');
         initPairingCodePage();
+    } else {
+        console.log('On index page or unknown path, no specific page init.');
     }
 });
 
@@ -156,28 +162,38 @@ function initPairingCodePage() {
     const generateCodeBtn = document.getElementById('generate-code-btn');
 
     if (generateCodeBtn) {
+        console.log('Pairing Code Page: Generate Code button (generate-code-btn) found, attaching listener.');
         generateCodeBtn.addEventListener('click', () => {
+            console.log('Pairing Code Page: Generate Code button clicked.');
             const phoneNumber = phoneNumberInputCode.value.trim();
-            // Basic validation for non-empty and digits only
-            if (!phoneNumber || !/^\d{10,15}$/.test(phoneNumber)) { // Adjust regex as needed
+
+            if (!phoneNumber || !/^\d{10,15}$/.test(phoneNumber)) {
+                console.log('Pairing Code Page: Invalid phone number entered:', phoneNumber);
                 statusMessage.textContent = 'Please enter a valid phone number (e.g., 2547xxxxxxxx, 10-15 digits).';
                 statusMessage.className = 'error';
-                pairingCodeContainer.innerHTML = '';
+                pairingCodeContainer.innerHTML = ''; // Clear previous code/message
                 return;
             }
 
+            console.log('Pairing Code Page: Phone number is valid:', phoneNumber, '- Checking WebSocket state.');
             statusMessage.textContent = 'Requesting Pairing Code...';
-            statusMessage.className = '';
+            statusMessage.className = ''; // Reset class
             pairingCodeContainer.innerHTML = '<p>Waiting for pairing code from server...</p>';
 
             if (socket && socket.readyState === WebSocket.OPEN) {
+                console.log('Pairing Code Page: WebSocket is open, sending requestCode for:', phoneNumber);
                 socket.send(JSON.stringify({ type: 'requestCode', phoneNumber: phoneNumber }));
             } else {
-                statusMessage.textContent = 'WebSocket not connected. Please refresh.';
+                const socketState = socket ? socket.readyState : 'socket is null';
+                console.error('Pairing Code Page: WebSocket not connected or not open. State:', socketState,
+                              '(0:CONNECTING, 1:OPEN, 2:CLOSING, 3:CLOSED)');
+                statusMessage.textContent = 'WebSocket not connected. Please refresh the page and try again.';
                 statusMessage.className = 'error';
-                 pairingCodeContainer.innerHTML = '<p class="error">Cannot request code. Connection issue.</p>';
+                pairingCodeContainer.innerHTML = '<p class="error">Cannot request code. Connection issue.</p>';
             }
         });
+    } else {
+        console.error('Pairing Code Page: Generate Code button (generate-code-btn) NOT found.');
     }
 }
 
